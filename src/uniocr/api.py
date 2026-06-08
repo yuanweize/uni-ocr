@@ -39,7 +39,7 @@ app = FastAPI(
         "Upload images or PDFs and receive structured text, Markdown, "
         "and layout blocks in a single JSON response."
     ),
-    version="0.2.1",
+    version="0.2.2",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -109,7 +109,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
 
 class HealthResponse(BaseModel):
     status: str = Field(..., example="ok")
-    version: str = Field(..., example="0.2.1")
+    version: str = Field(..., example="0.2.2")
     engines: List[str] = Field(..., example=["paddle", "apple"])
     details: Dict[str, Any] = Field(..., description="Deep check results for each engine")
 

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="UniOCR Logo" width="400"/>
+  <img src="https://raw.githubusercontent.com/yuanweize/uni-ocr/refs/heads/master/assets/logo.svg" alt="UniOCR Logo" width="400"/>
 </p>
 
 <p align="center">

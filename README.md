@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="UniOCR Logo" width="400"/>
+  <img src="https://raw.githubusercontent.com/yuanweize/uni-ocr/refs/heads/master/assets/logo.svg" alt="UniOCR Logo" width="400"/>
 </p>
 
 <p align="center">
@@ -161,7 +161,7 @@ docker compose up -d
 ```bash
 # Health check
 curl http://localhost:8000/health
-# → {"status":"ok","version":"0.2.1","engines":["paddle","apple"]}
+# → {"status":"ok","version":"0.2.2","engines":["paddle","apple"]}
 
 # Upload a file
 curl -X POST http://localhost:8000/extract \
