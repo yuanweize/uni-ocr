@@ -102,24 +102,41 @@ def get_system_info():
         "gpu_percent": get_gpu_percent(),
         "uptime_hours": round((time.time() - psutil.boot_time()) / 3600, 1),
         "network_ip": socket.gethostbyname(socket.gethostname()) if socket.gethostname() else "127.0.0.1",
-        "apple_silicon": False,
-        "mlx_available": False,
-        "paddle_available": False,
+        "ai_models": {
+            "apple_vision": {
+                "name": "Apple Vision (Neural Engine)",
+                "status": "Ready" if platform.system() == "Darwin" and platform.machine() == "arm64" else "Unsupported",
+                "version": "macOS Native",
+                "active": platform.system() == "Darwin"
+            },
+            "paddle_ocr": {
+                "name": "PaddleOCR-VL",
+                "status": "Missing",
+                "version": "N/A",
+                "active": False
+            },
+            "mlx_vlm": {
+                "name": "MLX-VLM Server",
+                "status": "Missing",
+                "version": "N/A",
+                "active": False
+            }
+        }
     }
     
-    # Apple Silicon detection
-    if platform.system() == "Darwin" and platform.machine() == "arm64":
-        info["apple_silicon"] = True
-        
     try:
-        import mlx.core
-        info["mlx_available"] = True
+        import paddle
+        info["ai_models"]["paddle_ocr"]["status"] = "Ready"
+        info["ai_models"]["paddle_ocr"]["version"] = paddle.__version__
+        info["ai_models"]["paddle_ocr"]["active"] = True
     except ImportError:
         pass
         
     try:
-        import paddle
-        info["paddle_available"] = True
+        import mlx.core as mx
+        info["ai_models"]["mlx_vlm"]["status"] = "Ready"
+        info["ai_models"]["mlx_vlm"]["version"] = mx.__version__
+        info["ai_models"]["mlx_vlm"]["active"] = True
     except ImportError:
         pass
         

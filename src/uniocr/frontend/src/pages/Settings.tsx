@@ -222,31 +222,27 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Accelerators & GPU */}
+          {/* Accelerators & Models */}
           <div className="glass-panel p-5 flex flex-col justify-between">
             <div className="flex items-center gap-2 text-white/50 mb-3">
               <Cpu size={16} />
-              <span className="text-xs font-bold uppercase tracking-wider">Accelerators & GPU</span>
+              <span className="text-xs font-bold uppercase tracking-wider">Accelerators & AI Models</span>
             </div>
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/5">
-                <span className="text-white/70 text-xs">Apple Neural Engine</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${systemInfo.apple_silicon ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
-                  {systemInfo.apple_silicon ? 'Ready' : 'N/A'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/5">
-                <span className="text-white/70 text-xs">PaddleOCR Backend</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${systemInfo.paddle_available ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                  {systemInfo.paddle_available ? 'Ready' : 'Missing'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between bg-white/5 p-2 rounded-lg border border-white/5">
-                <span className="text-white/70 text-xs">MLX-VLM Backend</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${systemInfo.mlx_available ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                  {systemInfo.mlx_available ? 'Ready' : 'Missing'}
-                </span>
-              </div>
+              {systemInfo.ai_models && Object.entries(systemInfo.ai_models).map(([key, model]: [string, any]) => (
+                <div key={key} className="flex flex-col gap-1 bg-white/5 p-3 rounded-lg border border-white/5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/80 text-sm font-medium">{model.name}</span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${model.active ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
+                      {model.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-white/40 text-[10px] uppercase">Engine Version</span>
+                    <span className="text-white/60 text-xs font-mono">{model.version}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
