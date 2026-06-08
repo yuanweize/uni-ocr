@@ -24,9 +24,9 @@ Built for developers, AI agents, and automation pipelines (n8n, Dify, Telegram b
 
 - 🔌 **Pluggable engines** — PaddleOCR-VL (deep document AI) and Apple Vision (native macOS) with automatic priority fallback
 - ⚡ **Zero-config acceleration** — Auto-detects Apple Silicon → launches MLX-VLM → Neural Engine speedup. No manual setup.
-- 📄 **Accepts anything** — file paths, URLs, Base64 data URIs, multi-page PDFs (auto-flattened)
-- 📦 **Unified output** — `Document → Pages → Blocks` with `.text`, `.markdown`, `.to_dict()`
-- 🌐 **REST API** — FastAPI with Swagger docs, batch processing, request tracking — ready for n8n / Dify / any HTTP client
+- 📄 **Accepts Anything** — File paths, URLs, Base64, multi-page PDFs (auto-flattened).
+- 📦 **Unified Output** — Supports `.text`, `.markdown`, `.json`, **and Searchable Dual-Layer PDFs**.
+- 🌐 **Built-in REST API** — FastAPI powered, Swagger docs, batch processing — directly consumable by n8n / Dify / any HTTP client.
 - 🐳 **Docker ready** — single command deployment via Docker Compose
 - 🖥️ **CLI** — `uniocr extract`, `uniocr engines`, `uniocr serve`
 
@@ -119,10 +119,13 @@ uniocr engines
 #     • paddle
 #     • apple
 
-# Extract text (default: Markdown output to stdout)
-uniocr extract document.pdf
+# Extract text (outputs Markdown by default)
+uniocr extract document.pdf -o result.md
 
-# Specify engine, format, and output file
+# Generate a Searchable PDF (automatically triggered by .pdf extension)
+uniocr extract input_image.jpg -o output_searchable.pdf
+
+# Specify engine and output format
 uniocr extract scan.png --engine apple --format json -o result.json
 
 # Extract from a URL
@@ -149,12 +152,13 @@ docker compose up -d
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/health` | Health check (includes engine list) |
+| `GET` | `/health` | Health check & engine list |
 | `GET` | `/engines` | List available OCR engines |
-| `GET` | `/docs` | Interactive Swagger UI |
-| `POST` | `/extract` | Extract from uploaded file |
-| `POST` | `/extract/url` | Extract from a public URL |
-| `POST` | `/extract/batch` | Batch process multiple files |
+| `GET` | `/docs` | Interactive Swagger docs |
+| `POST` | `/extract` | Extract text from uploaded file (JSON/Markdown) |
+| `POST` | `/extract/pdf` | Extract text and return a Searchable PDF file |
+| `POST` | `/extract/url` | Extract text from URL |
+| `POST` | `/extract/batch` | Process multiple files |
 
 #### Examples
 
@@ -168,15 +172,17 @@ curl -X POST http://localhost:8000/extract \
   -F "file=@invoice.pdf" \
   -F "engine=auto"
 
-# Extract from URL
+# Extract via URL
 curl -X POST http://localhost:8000/extract/url \
-  -F "url=https://example.com/scan.png" \
-  -F "engine=apple"
+  -F "url=https://example.com/image.png"
 
-# Batch processing (multiple files in one request)
+# Return a Searchable PDF directly
+curl -X POST http://localhost:8000/extract/pdf \
+  -F "file=@scan.png" -o searchable.pdf
+
+# Batch processing
 curl -X POST http://localhost:8000/extract/batch \
-  -F "files=@page1.png" \
-  -F "files=@page2.png" \
+  -F "files=@page1.png" -F "files=@page2.png" \
   -F "engine=auto"
 ```
 

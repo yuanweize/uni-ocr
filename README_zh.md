@@ -25,7 +25,7 @@
 - 🔌 **可插拔引擎** — PaddleOCR-VL（深度文档 AI）和 Apple Vision（macOS 原生），自动优先级回退
 - ⚡ **零配置加速** — 自动检测 Apple Silicon → 启动 MLX-VLM → Neural Engine 硬件加速，无需手动配置
 - 📄 **接受一切输入** — 文件路径、URL、Base64、多页 PDF（自动压平为图像）
-- 📦 **统一输出格式** — `Document → Pages → Blocks`，支持 `.text` / `.markdown` / `.to_dict()`
+- 📦 **统一输出格式** — 支持 `.text` / `.markdown` / `.json`，**以及生成“双层可搜索 PDF” (Searchable PDF)**
 - 🌐 **内置 REST API** — 基于 FastAPI，支持 Swagger 文档、批量处理、请求追踪 —— 可直接被 n8n / Dify / 任何 HTTP 客户端调用
 - 🐳 **Docker 就绪** — 一条命令部署
 - 🖥️ **命令行工具** — `uniocr extract` · `uniocr engines` · `uniocr serve`
@@ -83,7 +83,10 @@ print(doc.to_dict())                  # JSON 可序列化字典
 uniocr engines
 
 # 提取文本（默认输出 Markdown）
-uniocr extract document.pdf
+uniocr extract document.pdf -o result.md
+
+# 生成双层可搜索 PDF（只需后缀名指定为 .pdf 即可）
+uniocr extract input_image.jpg -o output_searchable.pdf
 
 # 指定引擎和输出格式
 uniocr extract scan.png --engine apple --format json -o result.json
@@ -106,6 +109,10 @@ curl -X POST http://localhost:8000/extract \
 curl -X POST http://localhost:8000/extract/url \
   -F "url=https://example.com/image.png"
 
+# 直接返回“双层可搜索 PDF”文件流（支持直接下载）
+curl -X POST http://localhost:8000/extract/pdf \
+  -F "file=@scan.png" -o searchable.pdf
+
 # 批量处理
 curl -X POST http://localhost:8000/extract/batch \
   -F "files=@page1.png" -F "files=@page2.png"
@@ -120,7 +127,8 @@ curl -X POST http://localhost:8000/extract/batch \
 | `GET` | `/health` | 健康检查（含引擎列表） |
 | `GET` | `/engines` | 列出可用 OCR 引擎 |
 | `GET` | `/docs` | Swagger 交互式文档 |
-| `POST` | `/extract` | 上传文件提取 |
+| `POST` | `/extract` | 上传文件提取（返回 JSON/Markdown） |
+| `POST` | `/extract/pdf` | 上传文件提取（直接返回双层 PDF 文件） |
 | `POST` | `/extract/url` | 通过 URL 提取 |
 | `POST` | `/extract/batch` | 批量处理多个文件 |
 

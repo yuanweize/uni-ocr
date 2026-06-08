@@ -20,11 +20,13 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
 from . import UniOCR, list_available_engines
 from .models import Document
+from .exporters.pdf import export_to_pdf
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +41,7 @@ app = FastAPI(
         "Upload images or PDFs and receive structured text, Markdown, "
         "and layout blocks in a single JSON response."
     ),
-    version="0.2.2",
+    version="0.2.3",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -325,3 +327,47 @@ async def extract_batch(
         "results": results,
         "elapsed_seconds": elapsed,
     }
+
+
+@app.post("/extract/pdf", response_class=FileResponse, tags=["OCR"])
+async def extract_to_pdf(
+    file: UploadFile = File(..., description="Image or PDF file to process"),
+    engine: str = Form("auto", description="Engine: auto | paddle | apple"),
+) -> Any:
+    """Extract text and layout, returning a Searchable PDF (双层 PDF)."""
+    suffix = Path(file.filename or "upload").suffix or ".png"
+    
+    # We need two temporary files: one for input, one for output
+    tmp_in = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    content = await file.read()
+    if not content:
+        tmp_in.close()
+        Path(tmp_in.name).unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail="Empty file uploaded.")
+        
+    tmp_in.write(content)
+    tmp_in.close()
+    in_path = Path(tmp_in.name)
+    
+    out_path = Path(tempfile.mktemp(suffix=".pdf"))
+    
+    try:
+        ocr = _get_ocr(engine)
+        doc = ocr.extract(in_path)
+        export_to_pdf(doc, in_path, out_path)
+    except Exception as exc:
+        in_path.unlink(missing_ok=True)
+        out_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail=str(exc))
+        
+    # Cleanup task for background
+    def cleanup():
+        in_path.unlink(missing_ok=True)
+        out_path.unlink(missing_ok=True)
+        
+    return FileResponse(
+        path=out_path,
+        media_type="application/pdf",
+        filename=f"searchable_{file.filename}.pdf" if file.filename else "searchable.pdf",
+        background=BackgroundTask(cleanup),
+    )

@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 from . import UniOCR, list_available_engines
+from .exporters.pdf import export_to_pdf
 
 
 def cmd_extract(args: argparse.Namespace) -> None:
@@ -15,6 +16,15 @@ def cmd_extract(args: argparse.Namespace) -> None:
     print(f"Processing '{args.input}' with engine: {engine_cls}", file=sys.stderr)
 
     doc = ocr.extract(args.input)
+
+    if args.format == "pdf" or (args.output and args.output.lower().endswith(".pdf") and args.format == "markdown"):
+        if not args.output:
+            print("Error: --output is required when format is pdf.", file=sys.stderr)
+            sys.exit(1)
+            
+        out_path = Path(args.output)
+        export_to_pdf(doc, Path(args.input), out_path)
+        return
 
     if args.format == "json":
         output_text = json.dumps(doc.to_dict(), ensure_ascii=False, indent=2)
@@ -94,8 +104,8 @@ def main() -> None:
     p_ext.add_argument("--output", "-o", help="Write output to file.")
     p_ext.add_argument(
         "--format", "-f", default="markdown",
-        choices=["markdown", "text", "json"],
-        help="Output format (default: markdown).",
+        choices=["markdown", "text", "json", "pdf"],
+        help="Output format (default: markdown). If output file ends with .pdf, format is auto-set to pdf.",
     )
     p_ext.set_defaults(func=cmd_extract)
 

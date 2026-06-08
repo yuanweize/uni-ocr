@@ -1,7 +1,7 @@
 [project]
 name = "uniocr"
-version = "0.2.2"
-description = "UniOCR - Unified multilingual OCR abstraction layer with pluggable engine support."
+version = "0.2.3"
+description = "Unified multilingual OCR tool based on PaddleOCR-VL and Apple Vision."
 readme = "README.md"
 authors = [
     { name = "Weize Yuan", email = "iyuanweize@gmail.com" }
