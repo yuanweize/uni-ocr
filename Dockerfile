@@ -2,6 +2,9 @@ FROM python:3.10-slim AS base
 
 WORKDIR /app
 
+# Auto-link GHCR package to GitHub repository
+LABEL org.opencontainers.image.source=https://github.com/yuanweize/uni-ocr
+
 # System dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
