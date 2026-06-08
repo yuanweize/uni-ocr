@@ -1,5 +1,13 @@
+import atexit
 import logging
 import os
+import re
+import shutil
+import signal
+import socket
+import subprocess
+import sys
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -8,27 +16,141 @@ from ..models import Document, DocumentPage, Block
 
 logger = logging.getLogger(__name__)
 
+# Module-level reference so we can clean up on exit
+_mlx_vlm_process: Optional[subprocess.Popen] = None
+
+_MLX_VLM_DEFAULT_PORT = 8111
+_MLX_VLM_DEFAULT_MODEL = "PaddlePaddle/PaddleOCR-VL-1.6"
+
+
+def _is_port_in_use(port: int) -> bool:
+    """Check if a TCP port is already listening."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(("127.0.0.1", port)) == 0
+
+
+def _find_free_port(start: int = 8111, end: int = 8200) -> int:
+    """Find the first free port in [start, end)."""
+    for port in range(start, end):
+        if not _is_port_in_use(port):
+            return port
+    raise RuntimeError(f"No free port found in range {start}-{end}")
+
+
+def _is_mlx_vlm_installed() -> bool:
+    """Check whether mlx-vlm is importable."""
+    try:
+        import mlx_vlm  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def _is_apple_silicon() -> bool:
+    """Return True if running on macOS with ARM (Apple Silicon)."""
+    try:
+        return os.uname().sysname == "Darwin" and os.uname().machine == "arm64"
+    except Exception:
+        return False
+
+
+def _ensure_mlx_vlm_server(port: int = _MLX_VLM_DEFAULT_PORT) -> Optional[str]:
+    """Auto-start an MLX-VLM server if the environment supports it.
+
+    Decision logic:
+      1. If an MLX-VLM server is already running on ``port``, reuse it.
+      2. If ``mlx_vlm`` is installed and we're on Apple Silicon, start one.
+      3. Otherwise return ``None`` → fall back to plain CPU inference.
+
+    Returns:
+        The base URL of the running server (e.g. ``http://localhost:8111/``),
+        or ``None`` if MLX-VLM is not available.
+    """
+    global _mlx_vlm_process
+
+    # 1. Already running? (e.g. user started it manually, or previous call)
+    if _is_port_in_use(port):
+        logger.info("MLX-VLM server already running on port %d — reusing.", port)
+        return f"http://localhost:{port}/"
+
+    # 2. Can we start one?
+    if not _is_apple_silicon():
+        logger.debug("Not Apple Silicon — MLX-VLM unavailable.")
+        return None
+
+    if not _is_mlx_vlm_installed():
+        logger.debug("mlx_vlm not installed — skipping auto-start.")
+        return None
+
+    # Find a free port (in case default is taken by something else)
+    try:
+        actual_port = port if not _is_port_in_use(port) else _find_free_port(port + 1)
+    except RuntimeError:
+        logger.warning("Could not find a free port for MLX-VLM server.")
+        return None
+
+    # 3. Launch the server in the background
+    logger.info(
+        "Auto-starting MLX-VLM server on port %d (Apple Neural Engine acceleration)…",
+        actual_port,
+    )
+    try:
+        _mlx_vlm_process = subprocess.Popen(
+            [
+                sys.executable, "-m", "mlx_vlm.server",
+                "--port", str(actual_port),
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        # Register cleanup so the server dies when we exit
+        atexit.register(_shutdown_mlx_vlm_server)
+    except Exception as exc:
+        logger.warning("Failed to start MLX-VLM server: %s", exc)
+        return None
+
+    # 4. Wait for it to become ready (up to 30 s)
+    url = f"http://localhost:{actual_port}/"
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        if _is_port_in_use(actual_port):
+            logger.info("MLX-VLM server is ready at %s", url)
+            return url
+        time.sleep(0.5)
+
+    logger.warning("MLX-VLM server did not start in time — falling back to CPU.")
+    _shutdown_mlx_vlm_server()
+    return None
+
+
+def _shutdown_mlx_vlm_server() -> None:
+    """Gracefully terminate the auto-started MLX-VLM server."""
+    global _mlx_vlm_process
+    if _mlx_vlm_process is not None:
+        logger.info("Shutting down auto-started MLX-VLM server (pid %d).", _mlx_vlm_process.pid)
+        _mlx_vlm_process.terminate()
+        try:
+            _mlx_vlm_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _mlx_vlm_process.kill()
+        _mlx_vlm_process = None
+
+
+# ======================================================================
+# Adapter
+# ======================================================================
+
 
 class PaddleOCRVLAdapter(BaseOCREngine):
-    """PaddleOCR-VL engine adapter with optional MLX-VLM acceleration.
+    """PaddleOCR-VL engine adapter with **automatic** MLX-VLM acceleration.
 
-    Supports two modes:
-      1. **Local inference** (default): loads the VLM model directly into memory.
-         Slower but requires no separate service.
-      2. **MLX-VLM accelerated** (recommended on Apple Silicon): connects to a
-         running ``mlx_vlm.server`` for the VLM component, leveraging Apple
-         Neural Engine for significantly faster inference.
+    On Apple Silicon, this adapter will:
+      1. Check if ``mlx_vlm`` is installed.
+      2. If yes, auto-start (or reuse) an ``mlx_vlm.server`` process.
+      3. Route the VLM inference through Apple Neural Engine for 2-5× speedup.
 
-    To use MLX-VLM mode, start the server first::
-
-        mlx_vlm.server --port 8111
-
-    Then initialise the adapter::
-
-        adapter = PaddleOCRVLAdapter(
-            mlx_vlm_url="http://localhost:8111/",
-            mlx_vlm_model="PaddlePaddle/PaddleOCR-VL-1.6",
-        )
+    No manual configuration needed.  To override, set ``UNIOCR_MLX_VLM_URL``
+    or pass ``mlx_vlm_url`` explicitly.
     """
 
     def __init__(
@@ -41,7 +163,7 @@ class PaddleOCRVLAdapter(BaseOCREngine):
         self._device = device
         self._mlx_vlm_url = mlx_vlm_url or os.environ.get("UNIOCR_MLX_VLM_URL")
         self._mlx_vlm_model = mlx_vlm_model or os.environ.get(
-            "UNIOCR_MLX_VLM_MODEL", "PaddlePaddle/PaddleOCR-VL-1.6"
+            "UNIOCR_MLX_VLM_MODEL", _MLX_VLM_DEFAULT_MODEL
         )
         self._pipeline_version = pipeline_version
         self._pipeline: Optional[Any] = None  # Lazy-loaded
@@ -62,29 +184,32 @@ class PaddleOCRVLAdapter(BaseOCREngine):
             "pipeline_version": self._pipeline_version,
         }
 
-        # If an MLX-VLM server URL is configured, route the VLM component
-        # through it for accelerated inference on Apple Silicon.
-        if self._mlx_vlm_url:
+        # Resolve MLX-VLM URL: explicit → env var → auto-detect & auto-start
+        mlx_url = self._mlx_vlm_url
+        if mlx_url is None:
+            mlx_url = _ensure_mlx_vlm_server()
+
+        if mlx_url:
             logger.info(
-                "PaddleOCR-VL will use MLX-VLM backend at %s (model: %s)",
-                self._mlx_vlm_url,
+                "PaddleOCR-VL → MLX-VLM backend at %s (model: %s)",
+                mlx_url,
                 self._mlx_vlm_model,
             )
             kwargs.update(
                 {
                     "vl_rec_backend": "mlx-vlm-server",
-                    "vl_rec_server_url": self._mlx_vlm_url,
+                    "vl_rec_server_url": mlx_url,
                     "vl_rec_api_model_name": self._mlx_vlm_model,
                 }
             )
         else:
             logger.info(
-                "PaddleOCR-VL running in local inference mode (device=%s). "
-                "Consider starting mlx_vlm.server for faster inference.",
+                "PaddleOCR-VL running in CPU-only mode (device=%s). "
+                "Install mlx-vlm for automatic Apple Neural Engine acceleration.",
                 self._device,
             )
 
-        logger.info("Loading PaddleOCR-VL pipeline (this may take a moment)…")
+        logger.info("Loading PaddleOCR-VL pipeline…")
         self._pipeline = PaddleOCRVL(**kwargs)
         return self._pipeline
 
@@ -125,8 +250,6 @@ class PaddleOCRVLAdapter(BaseOCREngine):
             # Build text from blocks; fall back to markdown content
             page_text = "\n".join(b.text for b in blocks)
             if not page_text and page_md:
-                # Strip basic markdown formatting to produce plain text
-                import re
                 page_text = re.sub(r"[#*_`>|]", "", page_md).strip()
             if not page_md:
                 page_md = "\n\n".join(b.text for b in blocks)
