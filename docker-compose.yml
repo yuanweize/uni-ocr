@@ -1,0 +1,24 @@
+services:
+  uniocr:
+    image: ghcr.io/yuanweize/uni-ocr:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${UNIOCR_PORT:-8000}:8000"
+    environment:
+      - UNIOCR_MLX_VLM_URL=${UNIOCR_MLX_VLM_URL:-}
+      - UNIOCR_MLX_VLM_MODEL=${UNIOCR_MLX_VLM_MODEL:-PaddlePaddle/PaddleOCR-VL-1.6}
+    volumes:
+      - model-cache:/root/.paddlex
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  model-cache:
+    driver: local
