@@ -1,62 +1,175 @@
-import { useState, useRef } from 'react';
-import axios from 'axios';
-import { UploadCloud, FileType, Type, FileJson, Loader2, Download, ScanText } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { UploadCloud, FileType, Type, FileJson, Loader2, Download, ScanText, Terminal } from 'lucide-react';
 
 export default function OcrConsole({ isPublic }: { isPublic: boolean }) {
   const [file, setFile] = useState<File | null>(null);
-  const [engine, setEngine] = useState('auto');
+  const [engine, setEngine] = useState(() => localStorage.getItem('preferredEngine') || 'auto');
   const [format, setFormat] = useState('markdown');
   const [loading, setLoading] = useState(false);
+  
   const [result, setResult] = useState<any>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [logs, setLogs] = useState<string[]>([]);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logsEndRef = useRef<HTMLDivElement>(null);
+
+  // Remember engine preference
+  useEffect(() => {
+    localStorage.setItem('preferredEngine', engine);
+  }, [engine]);
+
+  // Auto scroll logs
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [logs]);
 
   const handleProcess = async () => {
     if (!file) return;
     setLoading(true);
     setResult(null);
     setPdfUrl(null);
+    setLogs(["[SYSTEM] Starting extraction process..."]);
 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('engine', engine);
+    formData.append('format', format);
 
     try {
+      const token = localStorage.getItem('token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       if (format === 'pdf') {
-        const res = await axios.post('/extract/pdf', formData, {
-          responseType: 'blob'
+        // SSE for PDF is harder because it's binary. The /stream endpoint returns JSON.
+        // Wait, the /stream endpoint returns JSON for all formats currently, but for PDF we need a binary file.
+        // The original /extract/pdf was used for PDF.
+        // Let's keep using the standard endpoint for PDF but maybe we can't stream logs easily for it unless we use SSE then download.
+        // For simplicity, if PDF, we just do normal POST, no logs, or we can use the old endpoint.
+        setLogs(prev => [...prev, "[SYSTEM] PDF extraction uses standard blocking call currently."]);
+        const res = await fetch('/extract/pdf', {
+          method: 'POST',
+          headers,
+          body: formData
         });
-        const url = window.URL.createObjectURL(new Blob([res.data]));
+        if (!res.ok) throw new Error('PDF Extraction failed');
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
         setPdfUrl(url);
-      } else {
-        const res = await axios.post('/extract', formData);
-        setResult(res.data);
+        setLogs(prev => [...prev, "[SYSTEM] PDF Generation complete!"]);
+        setLoading(false);
+        return;
       }
-    } catch (err) {
+
+      // SSE flow for text/json/markdown
+      const response = await fetch('/extract/stream', {
+        method: 'POST',
+        headers,
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error('Stream request failed');
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.replace('data: ', '');
+              try {
+                const data = JSON.parse(dataStr);
+                if (data.type === 'log') {
+                  setLogs(prev => [...prev, `[ENGINE] ${data.message}`]);
+                } else if (data.type === 'result') {
+                  setResult(data.data);
+                  setLogs(prev => [...prev, "[SYSTEM] Extraction complete!"]);
+                } else if (data.type === 'error') {
+                  setLogs(prev => [...prev, `[ERROR] ${data.message}`]);
+                }
+              } catch (e) {}
+            }
+          }
+        }
+      }
+    } catch (err: any) {
       console.error(err);
-      alert('Extraction failed');
+      setLogs(prev => [...prev, `[SYSTEM ERROR] ${err.message}`]);
     } finally {
       setLoading(false);
     }
   };
 
-  const renderResult = () => {
-    if (pdfUrl) {
+  const handleDownload = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const renderDownloadButton = () => {
+    if (format === 'pdf' && pdfUrl) {
       return (
-        <div className="h-full flex flex-col items-center justify-center text-center p-8 gap-4">
-          <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center">
-            <Download className="text-green-400" size={32} />
-          </div>
-          <h3 className="text-xl font-bold">Searchable PDF Generated!</h3>
-          <p className="text-white/50 mb-4">Your document has been overlayed with invisible searchable text.</p>
-          <a href={pdfUrl} download={`searchable_${file?.name}.pdf`} className="glass-button-primary">
-            Download PDF
-          </a>
+        <a href={pdfUrl} download={`searchable_${file?.name || 'document'}.pdf`} className="glass-button bg-white/10 hover:bg-white/20 text-white flex items-center gap-2 text-sm border border-white/20 backdrop-blur-md px-3 py-1.5 rounded-lg transition-colors">
+          <Download size={14} /> Download PDF
+        </a>
+      );
+    }
+
+    if (result && format !== 'pdf') {
+      let displayContent = '';
+      let dlExt = 'txt';
+      let dlMime = 'text/plain';
+
+      if (format === 'markdown') {
+        displayContent = result.markdown;
+        dlExt = 'md';
+        dlMime = 'text/markdown';
+      } else if (format === 'text') {
+        displayContent = result.text;
+      } else if (format === 'json') {
+        displayContent = JSON.stringify(result, null, 2);
+        dlExt = 'json';
+        dlMime = 'application/json';
+      }
+
+      return (
+        <button 
+          onClick={() => handleDownload(displayContent, `extraction.${dlExt}`, dlMime)}
+          className="glass-button bg-white/10 hover:bg-white/20 text-white flex items-center gap-2 text-sm border border-white/20 backdrop-blur-md px-3 py-1.5 rounded-lg transition-colors"
+        >
+          <Download size={14} /> Download .{dlExt}
+        </button>
+      );
+    }
+    return null;
+  };
+
+  const renderResult = () => {
+    if (format === 'pdf' && pdfUrl) {
+      return (
+        <div className="h-full flex flex-col bg-white/5">
+          <iframe src={pdfUrl} className="w-full h-full border-0 rounded-b-xl" title="PDF Preview" />
         </div>
       );
     }
 
-    if (!result) return (
+    if (!result || (format === 'pdf' && !pdfUrl)) return (
       <div className="h-full flex items-center justify-center text-white/30">
         Results will appear here
       </div>
@@ -64,13 +177,15 @@ export default function OcrConsole({ isPublic }: { isPublic: boolean }) {
 
     let displayContent = '';
     if (format === 'markdown') displayContent = result.markdown;
-    if (format === 'text') displayContent = result.text;
-    if (format === 'json') displayContent = JSON.stringify(result, null, 2);
+    else if (format === 'text') displayContent = result.text;
+    else if (format === 'json') displayContent = JSON.stringify(result, null, 2);
 
     return (
-      <pre className="p-6 h-full overflow-auto text-sm text-white/80 whitespace-pre-wrap font-mono custom-scrollbar">
-        {displayContent}
-      </pre>
+      <div className="flex flex-col h-full">
+        <pre className="p-6 h-full overflow-auto text-sm text-white/80 whitespace-pre-wrap font-mono custom-scrollbar">
+          {displayContent}
+        </pre>
+      </div>
     );
   };
 
@@ -89,8 +204,10 @@ export default function OcrConsole({ isPublic }: { isPublic: boolean }) {
       </header>
 
       <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
-        {/* Controls Panel */}
-        <div className="w-full lg:w-80 flex flex-col gap-6">
+        
+        {/* Left Column: Controls & Logs */}
+        <div className="w-full lg:w-96 flex flex-col gap-6">
+          
           <div className="glass-panel p-6 flex flex-col gap-4">
             <h3 className="font-semibold text-white/80 mb-2">1. Upload Source</h3>
             <div 
@@ -99,7 +216,7 @@ export default function OcrConsole({ isPublic }: { isPublic: boolean }) {
             >
               <UploadCloud size={32} className="text-white/50" />
               <div className="text-center">
-                <p className="font-medium">{file ? file.name : "Select or drop file"}</p>
+                <p className="font-medium text-white">{file ? file.name : "Select or drop file"}</p>
                 <p className="text-xs text-white/40 mt-1">Image or PDF format</p>
               </div>
               <input type="file" className="hidden" ref={fileInputRef} onChange={e => setFile(e.target.files?.[0] || null)} />
@@ -140,13 +257,34 @@ export default function OcrConsole({ isPublic }: { isPublic: boolean }) {
               {loading ? 'Processing...' : 'Run Extraction'}
             </button>
           </div>
+
+          {/* Terminal Log Panel */}
+          <div className="glass-panel flex-1 min-h-[200px] flex flex-col overflow-hidden bg-black/60">
+            <div className="border-b border-white/10 p-3 bg-black/40 flex items-center gap-2">
+              <Terminal size={14} className="text-white/50" />
+              <span className="text-xs font-bold text-white/50 tracking-wider">PROCESS LOGS</span>
+            </div>
+            <div className="flex-1 overflow-auto p-4 custom-scrollbar font-mono text-[11px] leading-relaxed">
+              {logs.length === 0 ? (
+                <span className="text-white/20">Waiting for extraction to start...</span>
+              ) : (
+                logs.map((log, i) => (
+                  <div key={i} className={`${log.includes('[ERROR]') ? 'text-red-400' : log.includes('[SYSTEM]') ? 'text-primary/80' : 'text-green-400/80'} mb-1 break-all`}>
+                    {log}
+                  </div>
+                ))
+              )}
+              <div ref={logsEndRef} />
+            </div>
+          </div>
+
         </div>
 
         {/* Results Panel */}
         <div className="flex-1 glass-panel flex flex-col overflow-hidden min-h-[400px]">
-          <div className="border-b border-white/10 p-4 bg-white/5 flex justify-between items-center">
-            <h3 className="font-semibold text-white/80">Result Output</h3>
-            {result && <span className="text-xs text-white/40">Took {result.elapsed_seconds?.toFixed(2)}s</span>}
+          <div className="border-b border-white/10 p-4 bg-white/5 flex justify-between items-center min-h-[60px]">
+            <h3 className="font-semibold text-white/80">Result Viewer</h3>
+            {renderDownloadButton()}
           </div>
           <div className="flex-1 overflow-hidden relative">
             {renderResult()}

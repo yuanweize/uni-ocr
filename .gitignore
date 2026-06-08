@@ -56,3 +56,5 @@ output/
 # Temp files
 *.tmp
 *.log
+
+data/

@@ -23,10 +23,11 @@ Built for developers, AI agents, and automation pipelines (n8n, Dify, Telegram b
 ## ✨ Highlights
 
 - 🔌 **Pluggable engines** — PaddleOCR-VL (deep document AI) and Apple Vision (native macOS) with automatic priority fallback
-- ⚡ **Zero-config acceleration** — Auto-detects Apple Silicon → launches MLX-VLM → Neural Engine speedup. No manual setup.
+- ⚡ **Zero-config acceleration** — Auto-detects Apple Silicon → launches MLX-VLM → Neural Engine speedup.
 - 📄 **Accepts Anything** — File paths, URLs, Base64, multi-page PDFs (auto-flattened).
 - 📦 **Unified Output** — Supports `.text`, `.markdown`, `.json`, **and Searchable Dual-Layer PDFs**.
-- 🌐 **Built-in REST API** — FastAPI powered, Swagger docs, batch processing — directly consumable by n8n / Dify / any HTTP client.
+- 🚀 **Smart LRU Cache** — Instant zero-delay format switching for recent files without re-running the neural network.
+- 🌐 **Built-in REST API & Dashboard** — FastAPI powered, complete with interactive OcrConsole UI, Advanced Hardware Monitoring (CPU/GPU/RAM/ROM), and built-in SQLite for API Keys & 2FA management.
 - 🐳 **Docker ready** — single command deployment via Docker Compose
 - 🖥️ **CLI** — `uniocr extract`, `uniocr engines`, `uniocr serve`
 

@@ -28,6 +28,8 @@ api = [
     "pyotp>=2.9.0",
     "PyJWT>=2.8.0",
     "bcrypt>=4.2.0",
+    "sqlalchemy>=2.0.0",
+    "psutil>=5.9.0",
 ]
 all = [
     "uniocr[paddle,apple,api]",

@@ -11,11 +11,15 @@ Or directly::
 
 import base64
 import logging
+import uuid
 import tempfile
 import time
-import uuid
+import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+# Suppress annoying third-party paddlex warnings
+warnings.filterwarnings("ignore", message=".*'mlx-vlm-server' does not support.*")
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile, status, Depends
 from fastapi.staticfiles import StaticFiles
@@ -29,6 +33,9 @@ from . import UniOCR, list_available_engines
 from .models import Document
 from .exporters.pdf import export_to_pdf
 from .routers_auth import router as auth_router, verify_public_or_authenticated
+from .routers_system import router as system_router
+from .routers_stream import router as stream_router
+from .cache import ocr_cache
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +64,8 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(system_router)
+app.include_router(stream_router)
 
 # ---------------------------------------------------------------------------
 # Standardised Error Handling (RFC 7807)
@@ -356,8 +365,7 @@ async def extract_to_pdf(
     out_path = Path(tempfile.mktemp(suffix=".pdf"))
     
     try:
-        ocr = _get_ocr(engine)
-        doc = ocr.extract(in_path)
+        doc = ocr_cache.get_or_extract(engine, content)
         export_to_pdf(doc, in_path, out_path)
     except Exception as exc:
         in_path.unlink(missing_ok=True)
@@ -372,7 +380,7 @@ async def extract_to_pdf(
     return FileResponse(
         path=out_path,
         media_type="application/pdf",
-        filename=f"searchable_{file.filename}.pdf" if file.filename else "searchable.pdf",
+        headers={"Content-Disposition": "inline"},
         background=BackgroundTask(cleanup),
     )
 

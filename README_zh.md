@@ -22,13 +22,14 @@
 
 ## ✨ 核心特性
 
-- 🔌 **可插拔引擎** — PaddleOCR-VL（深度文档 AI）和 Apple Vision（macOS 原生），自动优先级回退
-- ⚡ **零配置加速** — 自动检测 Apple Silicon → 启动 MLX-VLM → Neural Engine 硬件加速，无需手动配置
-- 📄 **接受一切输入** — 文件路径、URL、Base64、多页 PDF（自动压平为图像）
-- 📦 **统一输出格式** — 支持 `.text` / `.markdown` / `.json`，**以及生成“双层可搜索 PDF” (Searchable PDF)**
-- 🌐 **内置 REST API** — 基于 FastAPI，支持 Swagger 文档、批量处理、请求追踪 —— 可直接被 n8n / Dify / 任何 HTTP 客户端调用
-- 🐳 **Docker 就绪** — 一条命令部署
-- 🖥️ **命令行工具** — `uniocr extract` · `uniocr engines` · `uniocr serve`
+- 🔌 **双擎驱动** — 深度文档 AI (PaddleOCR-VL) 与 macOS 原生视觉 (Apple Vision)，支持自动降级兜底。
+- ⚡ **零配置满血加速** — 自动探测 Apple Silicon → 启动 MLX-VLM 引擎 → 满血调用神经网络引擎 (NPU)，无需繁琐环境配置。
+- 📄 **万物皆可提取** — 完美支持本地路径、网络 URL、Base64 编码，甚至原生支持**多页 PDF 自动拆分提取**。
+- 📦 **全格式输出** — 支持 `.text`, `.markdown`, `.json`，以及直接生成**可搜索双层 PDF**。
+- 🚀 **智能缓存** — 内置内存级 LRU 缓存，同一文件在不同格式之间切换可实现 **0秒瞬间返回**，拒绝重复消耗算力。
+- 🌐 **企业级控制台** — 极其优雅的 Web UI 控制台，内置高级硬件实时监控（CPU/GPU/RAM），采用 SQLite 提供 API Key 管理及 2FA 两步验证。
+- 🐳 **Docker 极简部署** — 提供官方镜像，一行代码拉起生产级服务。
+- 🖥️ **全能 CLI 终端** — 提供 `uniocr extract`, `uniocr engines`, `uniocr serve` 命令。
 
 ## 🚀 快速开始
 
