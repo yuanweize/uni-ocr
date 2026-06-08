@@ -7,14 +7,19 @@ import axios from 'axios'
 // Global Axios Config
 axios.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  // Only attach token to internal API requests
+  if (token && (config.url?.startsWith('/api') || config.url?.startsWith(window.location.origin))) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Only handle 401 for internal API requests
+    const isInternalRequest = error.config?.url?.startsWith('/api') || error.config?.url?.startsWith(window.location.origin);
+    if (isInternalRequest && error.response?.status === 401) {
       localStorage.removeItem('token');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
