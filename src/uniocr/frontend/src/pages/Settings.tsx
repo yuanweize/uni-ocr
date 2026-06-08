@@ -139,7 +139,7 @@ export default function Settings() {
           <h3 className="text-xl font-bold">System Status</h3>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
           {/* Node Details */}
           <div className="glass-panel p-5 flex flex-col gap-4">
             <div className="flex items-center gap-2 text-white/50 mb-1">
@@ -168,7 +168,7 @@ export default function Settings() {
           </div>
 
           {/* Hardware Load */}
-          <div className="glass-panel p-5 flex flex-col justify-between">
+          <div className="glass-panel p-5 flex flex-col gap-4">
             <div className="flex items-center gap-2 text-white/50 mb-3">
               <HardDrive size={16} />
               <span className="text-xs font-bold uppercase tracking-wider">Hardware Load</span>
@@ -223,7 +223,7 @@ export default function Settings() {
           </div>
 
           {/* Accelerators & Models */}
-          <div className="glass-panel p-5 flex flex-col justify-between">
+          <div className="glass-panel p-5 flex flex-col gap-4">
             <div className="flex items-center gap-2 text-white/50 mb-3">
               <Cpu size={16} />
               <span className="text-xs font-bold uppercase tracking-wider">Accelerators & AI Models</span>
