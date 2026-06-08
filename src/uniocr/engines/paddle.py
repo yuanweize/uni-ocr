@@ -1,25 +1,35 @@
-import os
+import logging
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 from .base import BaseOCREngine
 from ..models import Document, DocumentPage, Block
+
+logger = logging.getLogger(__name__)
+
 
 class PaddleOCRVLAdapter(BaseOCREngine):
     """
     PaddleOCR-VL Adapter.
     Uses PaddleOCRVL internally for comprehensive document analysis.
+    Lazy-loads the heavy model on first call to extract().
     """
-    def __init__(self):
-        if not self.is_available():
-            raise RuntimeError("PaddleOCR dependencies are not installed.")
-        from paddleocr import PaddleOCRVL
-        # Assume CPU device for local fallback if not configured otherwise
-        self.pipeline = PaddleOCRVL(device="cpu")
+
+    def __init__(self, device: str = "cpu") -> None:
+        self._device = device
+        self._pipeline: Optional[Any] = None  # Lazy-loaded
+
+    def _get_pipeline(self) -> Any:
+        """Lazy-load the PaddleOCR-VL pipeline on first use."""
+        if self._pipeline is None:
+            logger.info("Loading PaddleOCR-VL pipeline (this may take a moment)...")
+            from paddleocr import PaddleOCRVL
+            self._pipeline = PaddleOCRVL(device=self._device)
+        return self._pipeline
 
     def is_available(self) -> bool:
         try:
-            import paddleocr
+            import paddleocr  # noqa: F401
             return True
         except ImportError:
             return False
@@ -29,37 +39,46 @@ class PaddleOCRVLAdapter(BaseOCREngine):
         if not input_path.exists():
             raise FileNotFoundError(f"Input file not found: {input_path}")
 
-        # PaddleOCR pipeline returns a generator of results per page
-        results_generator = self.pipeline.predict(input=str(input_path))
-        
+        pipeline = self._get_pipeline()
+        results_generator = pipeline.predict(input=str(input_path))
+
         pages = []
         for i, res in enumerate(results_generator):
             blocks = []
-            
-            # The result object contains layout analysis blocks and text
-            # Usually res.res['layout_det_res']['boxes'] and res.res['parsing_res_list']
-            # PaddleOCRVL result structure varies slightly, but typically provides markdown
-            
-            # For this MVP we just dump the raw text / markdown into our standard structure
-            # and try to extract basic blocks if they exist.
-            
-            parsed_res = res.res.get('parsing_res_list', [])
+            parsed_res = res.res.get("parsing_res_list", [])
             for block_data in parsed_res:
-                bbox = block_data.get('block_bbox', (0,0,0,0))
-                blocks.append(Block(
-                    block_type=block_data.get('block_label', 'text'),
-                    text=block_data.get('block_content', ''),
-                    bbox=tuple(bbox),
-                    confidence=1.0, # PaddleOCRVL block conf isn't always surfaced cleanly here
-                    extra_data=block_data
-                ))
+                raw_bbox = block_data.get("block_bbox", (0, 0, 0, 0))
+                blocks.append(
+                    Block(
+                        block_type=block_data.get("block_label", "text"),
+                        text=block_data.get("block_content", ""),
+                        bbox=tuple(float(v) for v in raw_bbox),
+                        confidence=1.0,
+                        extra_data=block_data,
+                    )
+                )
+
+            # Attempt to use structured output methods if available
+            page_text = ""
+            page_md = ""
+            try:
+                page_md = res.save_to_markdown() if hasattr(res, "save_to_markdown") else ""
+            except Exception:
+                pass
             
-            page = DocumentPage(
-                page_number=i + 1,
-                blocks=blocks,
-                text=res.get_text() if hasattr(res, 'get_text') else "", 
-                markdown=res.get_markdown() if hasattr(res, 'get_markdown') else str(res.res)
+            # Fallback: concatenate block content
+            if not page_text:
+                page_text = "\n".join(b.text for b in blocks)
+            if not page_md:
+                page_md = "\n\n".join(b.text for b in blocks)
+
+            pages.append(
+                DocumentPage(
+                    page_number=i + 1,
+                    blocks=blocks,
+                    text=page_text,
+                    markdown=page_md,
+                )
             )
-            pages.append(page)
 
         return Document(pages=pages)
