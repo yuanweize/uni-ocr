@@ -18,6 +18,7 @@ export default function Settings() {
   
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
   const [keyCopied, setKeyCopied] = useState(false);
+  const [testCodeSnippet, setTestCodeSnippet] = useState<string | null>(null);
 
   const loadSystemInfo = async () => {
     try {
@@ -401,9 +402,8 @@ export default function Settings() {
                   <button 
                     onClick={() => {
                       const host = window.location.origin;
-                      const curl = `curl -X POST ${host}/api/ocr \\\n  -H "Authorization: Bearer <YOUR_API_KEY>" \\\n  -H "Content-Type: multipart/form-data" \\\n  -F "file=@/path/to/image.png"`;
-                      navigator.clipboard.writeText(curl);
-                      alert("Test curl snippet copied! Replace <YOUR_API_KEY> with your actual key.");
+                      const curl = `curl -X POST ${host}/api/extract \\\n  -H "Authorization: Bearer <YOUR_API_KEY>" \\\n  -H "Content-Type: multipart/form-data" \\\n  -F "file=@/path/to/image.png"`;
+                      setTestCodeSnippet(curl);
                     }}
                     className="px-3 py-1.5 text-blue-400 hover:bg-blue-500/20 rounded-lg transition-colors border border-transparent flex items-center gap-2 text-sm font-medium"
                     title="Copy test code"
@@ -463,10 +463,8 @@ export default function Settings() {
               <button
                 onClick={() => {
                   const host = window.location.origin;
-                  const curl = `curl -X POST ${host}/api/ocr \\\n  -H "Authorization: Bearer ${newlyCreatedKey}" \\\n  -H "Content-Type: multipart/form-data" \\\n  -F "file=@/path/to/image.png"`;
-                  navigator.clipboard.writeText(curl);
-                  setKeyCopied(true);
-                  setTimeout(() => setKeyCopied(false), 2000);
+                  const curl = `curl -X POST ${host}/api/extract \\\n  -H "Authorization: Bearer ${newlyCreatedKey}" \\\n  -H "Content-Type: multipart/form-data" \\\n  -F "file=@/path/to/image.png"`;
+                  setTestCodeSnippet(curl);
                 }}
                 className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-xl transition-colors text-sm font-medium border border-blue-500/20"
               >
@@ -480,6 +478,52 @@ export default function Settings() {
                 I have saved it securely
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Test Code Modal */}
+      {testCodeSnippet && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="glass-panel p-8 max-w-2xl w-full flex flex-col gap-6 relative shadow-2xl border-primary/30">
+            <button 
+              onClick={() => setTestCodeSnippet(null)}
+              className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors"
+            >
+              <X size={20} />
+            </button>
+            
+            <div className="flex items-center gap-3 text-white border-b border-white/10 pb-3">
+              <Terminal className="text-primary" size={24} />
+              <h3 className="text-xl font-bold">API Test Code</h3>
+            </div>
+            
+            <p className="text-white/60 text-sm">
+              Use this ready-to-run <code>curl</code> snippet to quickly test your API key against the extraction endpoint.
+            </p>
+
+            <div className="relative group">
+              <pre className="bg-black/50 p-4 rounded-xl border border-white/10 overflow-x-auto text-primary font-mono text-sm leading-relaxed whitespace-pre-wrap word-break">
+                {testCodeSnippet}
+              </pre>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(testCodeSnippet);
+                  setKeyCopied(true);
+                  setTimeout(() => setKeyCopied(false), 2000);
+                }}
+                className="absolute top-3 right-3 p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors opacity-0 group-hover:opacity-100 backdrop-blur-md"
+              >
+                {keyCopied ? <Check size={18} className="text-green-400" /> : <Copy size={18} />}
+              </button>
+            </div>
+            
+            <button 
+              onClick={() => setTestCodeSnippet(null)}
+              className="glass-button-primary w-full mt-2"
+            >
+              Done
+            </button>
           </div>
         </div>
       )}
