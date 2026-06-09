@@ -262,17 +262,17 @@ export default function Settings() {
           <h3 className="text-xl font-bold">Access & Security</h3>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
           
           {/* Access Control */}
-          <div className="glass-panel p-6 flex flex-col gap-4 h-full">
+          <div className="glass-panel p-6 flex flex-col gap-4">
             <div className="flex items-center gap-3 text-white">
               <Globe className="text-primary shrink-0" />
               <h4 className="text-lg font-bold">Access Control</h4>
             </div>
             <p className="text-white/60 text-sm">Control whether the OCR Console is available publicly or requires authentication.</p>
             
-            <div className="flex items-center justify-between gap-4 p-4 bg-white/5 rounded-xl border border-white/10 mt-auto">
+            <div className="flex items-center justify-between gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
               <div className="flex-1">
                 <p className="text-white font-medium">Public OCR Console</p>
                 <p className="text-white/40 text-xs mt-1">If disabled, users must log in.</p>
@@ -292,14 +292,14 @@ export default function Settings() {
           </div>
 
           {/* Change Password */}
-          <div className="glass-panel p-6 flex flex-col gap-4 h-full">
+          <div className="glass-panel p-6 flex flex-col gap-4">
             <div className="flex items-center gap-3 text-white">
               <Lock className="text-primary shrink-0" />
               <h4 className="text-lg font-bold">Admin Password</h4>
             </div>
             <p className="text-white/60 text-sm">Change the master password used to access settings and private OCR.</p>
             
-            <form onSubmit={handleChangePassword} className="flex gap-2 mt-auto w-full">
+            <form onSubmit={handleChangePassword} className="flex gap-2 w-full">
               <input 
                 type="password" 
                 placeholder="New Password" 
@@ -313,7 +313,7 @@ export default function Settings() {
           </div>
 
           {/* 2FA Setup */}
-          <div className="glass-panel p-6 flex flex-col gap-4 h-full">
+          <div className="glass-panel p-6 flex flex-col gap-4">
             <div className="flex items-center gap-3 text-white">
               <QrCode className="text-primary shrink-0" />
               <h4 className="text-lg font-bold">Two-Factor Auth</h4>
@@ -322,7 +322,7 @@ export default function Settings() {
             {!config.is_2fa_enabled && !setup2fa && (
               <>
                 <p className="text-white/60 text-sm">Enhance security by requiring an authenticator code.</p>
-                <form onSubmit={handleInit2FA} className="flex flex-col gap-3 mt-auto">
+                <form onSubmit={handleInit2FA} className="flex flex-col gap-3">
                   <input 
                     type="password" 
                     placeholder="Current Password" 
@@ -339,7 +339,7 @@ export default function Settings() {
             )}
 
             {config.is_2fa_enabled && (
-              <div className="flex flex-col h-full justify-center items-center p-4 bg-green-500/5 rounded-xl border border-green-500/20">
+              <div className="flex flex-col justify-center items-center p-4 bg-green-500/5 rounded-xl border border-green-500/20">
                 <ShieldAlert className="text-green-400 mb-2" size={32} />
                 <p className="text-white font-medium">2FA is Enabled</p>
                 <p className="text-white/40 text-xs mt-1 text-center">Your account is secured with TOTP.</p>
@@ -347,7 +347,7 @@ export default function Settings() {
             )}
 
             {setup2fa && (
-              <div className="flex flex-col gap-4 mt-auto">
+              <div className="flex flex-col gap-4">
                 <div className="bg-white p-2 rounded-xl mx-auto w-fit">
                   <QRCodeSVG value={setup2fa.uri} size={100} />
                 </div>
