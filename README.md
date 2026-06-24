@@ -20,7 +20,7 @@
 
 Built for developers, AI agents, and automation pipelines (n8n, Dify, Telegram bots, etc.).
 
-## ✨ V3.0 Pro Max Highlights
+## ✨ Key Features
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/yuanweize/uni-ocr/refs/heads/master/assets/dashboard.png" alt="UniOCR Web Dashboard" width="80%" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />

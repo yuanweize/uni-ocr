@@ -20,7 +20,7 @@
 
 专为开发者、AI Agent 和自动化管线（n8n、Dify、Telegram Bot 等）设计。
 
-## ✨ V3.0 Pro Max 核心特性
+## ✨ 核心特性
 
 <div align="center">
   <img src="https://raw.githubusercontent.com/yuanweize/uni-ocr/refs/heads/master/assets/dashboard.png" alt="UniOCR Web Dashboard" width="80%" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
