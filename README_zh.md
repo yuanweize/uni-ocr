@@ -22,10 +22,15 @@
 
 ## ✨ V3.0 Pro Max 核心特性
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/yuanweize/uni-ocr/refs/heads/master/assets/dashboard.png" alt="UniOCR Web Dashboard" width="100%" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); margin-bottom: 20px;"/>
-  <img src="https://raw.githubusercontent.com/yuanweize/uni-ocr/refs/heads/master/assets/settings.png" alt="UniOCR Hardware Radar" width="100%" style="border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);"/>
-</p>
+<div align="center">
+  <picture>
+    <img src="https://raw.githubusercontent.com/yuanweize/uni-ocr/refs/heads/master/assets/dashboard.png" alt="UniOCR Web Dashboard" width="100%" />
+  </picture>
+  <br/><br/>
+  <picture>
+    <img src="https://raw.githubusercontent.com/yuanweize/uni-ocr/refs/heads/master/assets/settings.png" alt="UniOCR Hardware Radar" width="100%" />
+  </picture>
+</div>
 
 - 🖥️ **极其优雅的企业级控制台** — 全新构建的 Glassmorphism (毛玻璃) 现代化 Web UI，集成了交互式 OCR 游乐场、API 生成器及完整运行监控。
 - 📊 **极客级硬件雷达** — 实时探测并轮询服务器物理底层状态：从 CPU/GPU 频率、内存/Swap 分配，到 Apple Neural Engine 及底层模型库真实加载状态，尽收眼底。

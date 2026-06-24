@@ -7,14 +7,7 @@ import Layout from './components/Layout';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 
-// Ambient Background Component
-const AmbientBackground = () => (
-  <>
-    <div className="ambient-blob bg-[#5e6ad2]" style={{ width: '40vw', height: '40vw', top: '-10%', left: '-10%', animationDelay: '0s' }} />
-    <div className="ambient-blob bg-[#a853ba]" style={{ width: '30vw', height: '30vw', bottom: '-5%', right: '-5%', animationDelay: '-5s' }} />
-    <div className="ambient-blob bg-[#2a8af6]" style={{ width: '25vw', height: '25vw', top: '40%', left: '40%', animationDelay: '-10s' }} />
-  </>
-);
+
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, isPublic, requiresAuth = false }: { children: React.ReactNode, isPublic?: boolean, requiresAuth?: boolean }) => {
@@ -39,7 +32,6 @@ function App() {
 
   return (
     <BrowserRouter>
-      <AmbientBackground />
       <Routes>
         <Route path="/login" element={<Login />} />
         

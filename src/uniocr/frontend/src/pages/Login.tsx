@@ -90,7 +90,7 @@ export default function Login() {
           </div>
         )}
 
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-primary to-purple-500 flex items-center justify-center shadow-xl mb-6">
+        <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-md mb-6">
           <ScanText className="text-white" size={32} />
         </div>
         <h1 className="text-3xl font-bold text-white mb-2">UniOCR</h1>

@@ -26,6 +26,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
+from fastapi.openapi.docs import get_swagger_ui_html
 from starlette.background import BackgroundTask
 from pydantic import BaseModel, Field
 
@@ -51,7 +52,7 @@ app = FastAPI(
         "and layout blocks in a single JSON response."
     ),
     version="3.0.1",
-    docs_url="/docs",
+    docs_url=None,
     redoc_url="/redoc",
 )
 
@@ -66,6 +67,16 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(system_router)
 app.include_router(stream_router)
+
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    return get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title=app.title + " - Swagger UI",
+        oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
+        swagger_ui_parameters={"syntaxHighlight.theme": "monokai", "defaultModelsExpandDepth": -1},
+        swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-themes@3.0.0/themes/3.x/theme-material.css"
+    )
 
 # ---------------------------------------------------------------------------
 # Standardised Error Handling (RFC 7807)
@@ -205,7 +216,7 @@ async def health_check() -> Any:
 
     for eng in engines:
         try:
-            adapter = UniOCR(engine=eng).engine
+            adapter = _get_ocr(eng).engine
             details[eng] = {"available": adapter.is_available()}
         except Exception as e:
             details[eng] = {"available": False, "error": str(e)}
