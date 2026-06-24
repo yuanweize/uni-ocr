@@ -23,13 +23,9 @@ Built for developers, AI agents, and automation pipelines (n8n, Dify, Telegram b
 ## ✨ V3.0 Pro Max Highlights
 
 <div align="center">
-  <picture>
-    <img src="https://raw.githubusercontent.com/yuanweize/uni-ocr/refs/heads/master/assets/dashboard.png" alt="UniOCR Web Dashboard" width="100%" />
-  </picture>
+  <img src="https://raw.githubusercontent.com/yuanweize/uni-ocr/refs/heads/master/assets/dashboard.png" alt="UniOCR Web Dashboard" width="80%" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
   <br/><br/>
-  <picture>
-    <img src="https://raw.githubusercontent.com/yuanweize/uni-ocr/refs/heads/master/assets/settings.png" alt="UniOCR Hardware Radar" width="100%" />
-  </picture>
+  <img src="https://raw.githubusercontent.com/yuanweize/uni-ocr/refs/heads/master/assets/settings.png" alt="UniOCR Hardware Radar" width="80%" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
 </div>
 
 - 🖥️ **Stunning Enterprise Dashboard** — A fully re-engineered Glassmorphism Web UI featuring an interactive OCR playground, API generator, and live system monitoring.
