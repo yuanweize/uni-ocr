@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@open-file-viewer/react": "^0.1.14",
     "axios": "^1.17.0",
     "lucide-react": "^1.17.0",
     "qrcode.react": "^4.2.0",

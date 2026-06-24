@@ -58,3 +58,15 @@ output/
 *.log
 
 data/
+
+# Frontend
+node_modules/
+
+# Build artifacts
+src/uniocr/static/
+
+# UV
+uv.lock
+
+# Playwright
+capture_screenshots.py
